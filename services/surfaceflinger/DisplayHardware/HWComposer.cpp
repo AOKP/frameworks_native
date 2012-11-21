@@ -678,15 +678,18 @@ status_t HWComposer::commit() {
 status_t HWComposer::release(int disp) {
     LOG_FATAL_IF(disp >= HWC_NUM_DISPLAY_TYPES);
     if (mHwc) {
-        eventControl(disp, HWC_EVENT_VSYNC, 0);
-        return (status_t)mHwc->blank(mHwc, disp, 1);
+        if (hwcHasVsyncEvent(mHwc)) {
+            eventControl(disp, HWC_EVENT_VSYNC, 0);
+        }
+        if(mHwc->blank)
+            return (status_t)hwcBlank(mHwc, disp, 1);
     }
     return NO_ERROR;
 }
 
 status_t HWComposer::acquire(int disp) {
     LOG_FATAL_IF(disp >= HWC_NUM_DISPLAY_TYPES);
-    if (mHwc) {
+    if (mHwc && mHwc->blank) {
         return (status_t)mHwc->blank(mHwc, disp, 0);
     }
     return NO_ERROR;
