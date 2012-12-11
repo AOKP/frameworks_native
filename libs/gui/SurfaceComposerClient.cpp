@@ -441,6 +441,30 @@ void SurfaceComposerClient::dispose() {
     mStatus = NO_INIT;
 }
 
+/* Create ICS/MR0-compatible constructors */
+extern "C" sp<SurfaceControl> _ZN7android21SurfaceComposerClient13createSurfaceERKNS_7String8Ejjij(
+        const String8& name,
+        uint32_t w,
+        uint32_t h,
+        PixelFormat format,
+        uint32_t flags);
+extern "C" sp<SurfaceControl> _ZN7android21SurfaceComposerClient13createSurfaceEijjij(
+        uint32_t display,
+        uint32_t w,
+        uint32_t h,
+        PixelFormat format,
+        uint32_t flags)
+{
+    String8 name;
+    const size_t SIZE = 128;
+    char buffer[SIZE];
+    snprintf(buffer, SIZE, "<pid_%d>", getpid());
+    name.append(buffer);
+
+    return _ZN7android21SurfaceComposerClient13createSurfaceERKNS_7String8Ejjij(name,
+            w, h, format, flags);
+}
+
 sp<SurfaceControl> SurfaceComposerClient::createSurface(
         const String8& name,
         uint32_t w,
@@ -573,6 +597,11 @@ status_t SurfaceComposerClient::getDisplayInfo(
         const sp<IBinder>& display, DisplayInfo* info)
 {
     return ComposerService::getComposerService()->getDisplayInfo(display, info);
+}
+
+extern "C" status_t _ZN7android21SurfaceComposerClient14getDisplayInfoEiPNS_11DisplayInfoE(int display_id, DisplayInfo* info)
+{
+    return SurfaceComposerClient::getDisplayInfo(ComposerService::getComposerService()->getBuiltInDisplay(0), info);
 }
 
 void SurfaceComposerClient::blankDisplay(const sp<IBinder>& token) {
