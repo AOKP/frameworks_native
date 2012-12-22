@@ -38,6 +38,9 @@
 
 #include <private/gui/ComposerService.h>
 #include <private/gui/LayerState.h>
+#ifdef QCOM_LEGACY
+#include <private/gui/SharedBufferStack.h>
+#endif
 
 namespace android {
 // ---------------------------------------------------------------------------
@@ -90,6 +93,16 @@ void ComposerService::composerServiceDied()
     mComposerService = NULL;
     mDeathObserver = NULL;
 }
+
+#ifdef QCOM_LEGACY
+surface_flinger_cblk_t const volatile * ComposerService::getControlBlock() {
+    return ComposerService::getInstance().mServerCblk;
+}
+
+static inline surface_flinger_cblk_t const volatile * get_cblk() {
+    return ComposerService::getControlBlock();
+}
+#endif
 
 // ---------------------------------------------------------------------------
 
@@ -598,6 +611,26 @@ status_t SurfaceComposerClient::getDisplayInfo(
 {
     return ComposerService::getComposerService()->getDisplayInfo(display, info);
 }
+
+#ifdef QCOM_LEGACY
+ssize_t SurfaceComposerClient::getDisplayWidth(int32_t dpy)
+{
+    if (uint32_t(dpy)>=NUM_DISPLAY_MAX)
+        return BAD_VALUE;
+    volatile surface_flinger_cblk_t const * cblk = get_cblk();
+    volatile display_cblk_t const * dcblk = cblk->displays + dpy;
+    return dcblk->w;
+}
+
+ssize_t SurfaceComposerClient::getDisplayHeight(int32_t dpy)
+{
+    if (uint32_t(dpy)>=NUM_DISPLAY_MAX)
+        return BAD_VALUE;
+    volatile surface_flinger_cblk_t const * cblk = get_cblk();
+    volatile display_cblk_t const * dcblk = cblk->displays + dpy;
+    return dcblk->h;
+}
+#endif
 
 void SurfaceComposerClient::blankDisplay(const sp<IBinder>& token) {
     ComposerService::getComposerService()->blank(token);
