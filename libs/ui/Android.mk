@@ -40,6 +40,25 @@ ifeq ($(BOARD_USES_LEGACY_OVERLAY), true)
 LOCAL_SRC_FILES += legacy/Overlay.cpp
 endif
 
+ifeq ($(TARGET_SOC),exynos4210)
+    LOCAL_CFLAGS += -DSAMSUNG_EXYNOS4210
+endif
+
+ifeq ($(TARGET_SOC),exynos4x12)
+    LOCAL_CFLAGS += -DSAMSUNG_EXYNOS4x12
+endif
+
+ifeq ($(TARGET_SOC),exynos5250)
+    LOCAL_CFLAGS += -DSAMSUNG_EXYNOS5250
+endif
+
+ifeq ($(BOARD_USES_SAMSUNG_HDMI),true)
+LOCAL_CFLAGS += -DSAMSUNG_HDMI_SUPPORT
+LOCAL_SHARED_LIBRARIES += libhdmiclient
+LOCAL_C_INCLUDES += hardware/samsung/$(TARGET_BOARD_PLATFORM)/libhdmi/libhdmiservice
+LOCAL_C_INCLUDES += hardware/samsung/$(TARGET_BOARD_PLATFORM)/include
+endif
+
 LOCAL_MODULE:= libui
 
 include $(BUILD_SHARED_LIBRARY)
