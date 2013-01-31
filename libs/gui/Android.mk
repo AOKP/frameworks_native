@@ -54,10 +54,6 @@ ifneq ($(filter generic%,$(TARGET_DEVICE)),)
     LOCAL_CFLAGS += -DUSE_FENCE_SYNC
 endif
 
-ifeq ($(BOARD_USES_LEGACY_QCOM),true)
-LOCAL_CFLAGS += -DQCOM_LEGACY
-endif
-
 ifeq ($(TARGET_BOARD_PLATFORM), msm8960)
 	LOCAL_CFLAGS += -DUSE_NATIVE_FENCE_SYNC
 endif

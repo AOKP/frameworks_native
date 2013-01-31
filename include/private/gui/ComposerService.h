@@ -30,9 +30,7 @@ namespace android {
 
 class IMemoryHeap;
 class ISurfaceComposer;
-#ifdef QCOM_LEGACY
-class surface_flinger_cblk_t;
-#endif
+
 // ---------------------------------------------------------------------------
 
 // This holds our connection to the composer service (i.e. SurfaceFlinger).
@@ -44,9 +42,6 @@ class surface_flinger_cblk_t;
 class ComposerService : public Singleton<ComposerService>
 {
     sp<ISurfaceComposer> mComposerService;
-#ifdef QCOM_LEGACY
-    surface_flinger_cblk_t volatile* mServerCblk;
-#endif
     sp<IBinder::DeathRecipient> mDeathObserver;
     Mutex mLock;
 
@@ -59,9 +54,6 @@ public:
     // Get a connection to the Composer Service.  This will block until
     // a connection is established.
     static sp<ISurfaceComposer> getComposerService();
-#ifdef QCOM_LEGACY
-    static surface_flinger_cblk_t const volatile * getControlBlock();
-#endif
 };
 
 // ---------------------------------------------------------------------------
