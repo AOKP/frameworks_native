@@ -199,7 +199,6 @@ status_t GraphicBufferAllocator::alloc(uint32_t w, uint32_t h, PixelFormat forma
         w = h = 1;
 
     // we have a h/w allocator and h/w buffer is requested
-    status_t err; 
 
 #ifdef EXYNOS4_ENHANCEMENTS
     if ((format == 0x101) || (format == 0x105) || (format == 0x107)) {
@@ -209,6 +208,7 @@ status_t GraphicBufferAllocator::alloc(uint32_t w, uint32_t h, PixelFormat forma
         usage |= GRALLOC_USAGE_HW_FIMC1; // Exynos HWC wants FIMC-friendly memory allocation
     }
 #endif
+    status_t err;
 
     // If too many async frees are queued up then wait for some of them to
     // complete before attempting to allocate more memory.  This is exercised
