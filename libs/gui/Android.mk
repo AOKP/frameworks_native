@@ -54,7 +54,7 @@ ifneq ($(filter generic%,$(TARGET_DEVICE)),)
     LOCAL_CFLAGS += -DUSE_FENCE_SYNC
 endif
 
-ifeq ($(call is-vendor-board-platform,QCOM),true)
+ifeq ($(TARGET_BOARD_PLATFORM), msm8960)
 	LOCAL_CFLAGS += -DUSE_NATIVE_FENCE_SYNC
 endif
 
