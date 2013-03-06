@@ -1,0 +1,9 @@
+Change-Id: Ie04998901c7c00f8abb1415f732b67b4365b2ed1
+Code-Review+2: Gergely Szell (sethyx) <sethyx@gmail.com>
+Verified+1: Gergely Szell (sethyx) <sethyx@gmail.com>
+Code-Review+1: Brandon McAnsh <bmc08gt.teamb00sted@gmail.com>
+Submitted-by: Gergely Szell (sethyx) <sethyx@gmail.com>
+Submitted-at: Wed, 06 Mar 2013 18:00:56 +0000
+Reviewed-on: http://gerrit.sudoservers.com/7178
+Project: AOKP/frameworks_native
+Branch: refs/heads/jb-mr1
