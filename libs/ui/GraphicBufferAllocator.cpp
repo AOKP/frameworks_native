@@ -215,6 +215,15 @@ status_t GraphicBufferAllocator::alloc(uint32_t w, uint32_t h, PixelFormat forma
     // by the android.opengl.cts.GLSurfaceViewTest CTS test.
     BufferLiberatorThread::maybeWaitForLiberation();
 
+#ifdef EXYNOS4_ENHANCEMENTS
+	if ((format == 0x101) || (format == 0x105) || (format == 0x107)) {
+		// 0x101 = HAL_PIXEL_FORMAT_YCbCr_420_P (Samsung-specific pixel format)
+		// 0x105 = HAL_PIXEL_FORMAT_YCbCr_420_SP (Samsung-specific pixel format)
+		// 0x107 = HAL_PIXEL_FORMAT_YCbCr_420_SP_TILED (Samsung-specific pixel format)
+		usage |= GRALLOC_USAGE_HW_FIMC1; // Exynos HWC wants FIMC-friendly memory allocation
+	}
+#endif
+
     err = mAllocDev->alloc(mAllocDev, w, h, format, usage, handle, stride);
 
     if (err != NO_ERROR) {
