@@ -219,6 +219,7 @@ status_t GraphicBufferAllocator::alloc(uint32_t w, uint32_t h,
         usage |= GRALLOC_USAGE_HW_FIMC1; // Exynos HWC wants FIMC-friendly memory allocation
     }
 #endif
+
     status_t err;
 
     // If too many async frees are queued up then wait for some of them to
@@ -227,17 +228,21 @@ status_t GraphicBufferAllocator::alloc(uint32_t w, uint32_t h,
     BufferLiberatorThread::maybeWaitForLiberation();
 
 #ifdef QCOM_BSP
-    if (bufferSize)
-        err = mAllocDev->allocSize(mAllocDev, w, h,
+    err = mAllocDev->allocSize(mAllocDev, w, h,
                                format, usage, handle, stride, bufferSize);
-    else
-#endif
+#else
     err = mAllocDev->alloc(mAllocDev, w, h, format, usage, handle, stride);
+#endif
 
     if (err != NO_ERROR) {
         ALOGW("WOW! gralloc alloc failed, waiting for pending frees!");
         BufferLiberatorThread::waitForLiberation();
+#ifdef QCOM_BSP
+        err = mAllocDev->allocSize(mAllocDev, w, h,
+                               format, usage, handle, stride, bufferSize);
+#else
         err = mAllocDev->alloc(mAllocDev, w, h, format, usage, handle, stride);
+#endif
     }
 
 #ifdef QCOM_BSP
