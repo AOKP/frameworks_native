@@ -219,6 +219,7 @@ status_t GraphicBufferAllocator::alloc(uint32_t w, uint32_t h,
         usage |= GRALLOC_USAGE_HW_FIMC1; // Exynos HWC wants FIMC-friendly memory allocation
     }
 #endif
+
     status_t err;
 
     // If too many async frees are queued up then wait for some of them to
