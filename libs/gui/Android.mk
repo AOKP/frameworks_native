@@ -54,8 +54,10 @@ ifneq ($(filter generic%,$(TARGET_DEVICE)),)
     LOCAL_CFLAGS += -DUSE_FENCE_SYNC
 endif
 
-ifeq ($(TARGET_BOARD_PLATFORM), msm8960)
+ifeq ($(call is-vendor-board-platform,QCOM),true)
+ifneq ($(TARGET_QCOM_DISPLAY_VARIANT),legacy)
 	LOCAL_CFLAGS += -DUSE_NATIVE_FENCE_SYNC
+endif
 endif
 
 ifeq ($(BOARD_ADRENO_DECIDE_TEXTURE_TARGET),true)
