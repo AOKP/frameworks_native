@@ -433,10 +433,35 @@ status_t SurfaceFlinger::selectEGLConfig(EGLDisplay display, EGLint nativeVisual
     err = selectConfigForAttribute(display, attribs, wantedAttribute,
         wantedAttributeValue, config);
     if (err == NO_ERROR) {
-        EGLint caveat;
-        if (eglGetConfigAttrib(display, *config, EGL_CONFIG_CAVEAT, &caveat))
-            ALOGW_IF(caveat == EGL_SLOW_CONFIG, "EGL_SLOW_CONFIG selected!");
+        goto success;
     }
+
+    // Try again without EGL_FRAMEBUFFER_TARGET_ANDROID
+    ALOGW("no suitable EGLConfig found, trying without EGL_FRAMEBUFFER_TARGET_ANDROID");
+    attribs.remove(EGL_FRAMEBUFFER_TARGET_ANDROID);
+    err = selectConfigForAttribute(display, attribs, wantedAttribute, wantedAttributeValue, config);
+    if (err == NO_ERROR) {
+        goto success;
+    }
+
+    // Try again without EGL_RECORDABLE_ANDROID
+    ALOGW("no suitable EGLConfig found, trying without EGL_RECORDABLE_ANDROID");
+    attribs.remove(EGL_RECORDABLE_ANDROID);
+    err = selectConfigForAttribute(display, attribs, wantedAttribute, wantedAttributeValue, config);
+    if (err == NO_ERROR) {
+        goto success;
+    }
+
+    // Failed to find a config
+    goto out;
+
+success:
+    EGLint caveat;
+    if (eglGetConfigAttrib(display, *config, EGL_CONFIG_CAVEAT, &caveat)) {
+        ALOGW_IF(caveat == EGL_SLOW_CONFIG, "EGL_SLOW_CONFIG selected!");
+    }
+
+out:
     return err;
 }
 
@@ -2839,7 +2864,8 @@ public:
 status_t SurfaceFlinger::captureScreen(const sp<IBinder>& display,
         const sp<IGraphicBufferProducer>& producer,
         uint32_t reqWidth, uint32_t reqHeight,
-        uint32_t minLayerZ, uint32_t maxLayerZ) {
+        uint32_t minLayerZ, uint32_t maxLayerZ,
+        bool useReadPixels) {
 
     if (CC_UNLIKELY(display == 0))
         return BAD_VALUE;
@@ -2865,16 +2891,18 @@ status_t SurfaceFlinger::captureScreen(const sp<IBinder>& display,
         sp<IGraphicBufferProducer> producer;
         uint32_t reqWidth, reqHeight;
         uint32_t minLayerZ,maxLayerZ;
+        bool useReadPixels;
         status_t result;
     public:
         MessageCaptureScreen(SurfaceFlinger* flinger,
                 const sp<IBinder>& display,
                 const sp<IGraphicBufferProducer>& producer,
                 uint32_t reqWidth, uint32_t reqHeight,
-                uint32_t minLayerZ, uint32_t maxLayerZ)
+                uint32_t minLayerZ, uint32_t maxLayerZ, bool useReadPixels)
             : flinger(flinger), display(display), producer(producer),
               reqWidth(reqWidth), reqHeight(reqHeight),
               minLayerZ(minLayerZ), maxLayerZ(maxLayerZ),
+              useReadPixels(useReadPixels),
               result(PERMISSION_DENIED)
         {
         }
@@ -2884,8 +2912,10 @@ status_t SurfaceFlinger::captureScreen(const sp<IBinder>& display,
         virtual bool handler() {
             Mutex::Autolock _l(flinger->mStateLock);
             sp<const DisplayDevice> hw(flinger->getDisplayDevice(display));
+            bool useReadPixels = this->useReadPixels && !flinger->mGpuToCpuSupported;
             result = flinger->captureScreenImplLocked(hw,
-                    producer, reqWidth, reqHeight, minLayerZ, maxLayerZ);
+                    producer, reqWidth, reqHeight, minLayerZ, maxLayerZ,
+                    useReadPixels);
             static_cast<GraphicProducerWrapper*>(producer->asBinder().get())->exit(result);
             return true;
         }
@@ -2907,7 +2937,8 @@ status_t SurfaceFlinger::captureScreen(const sp<IBinder>& display,
     // which does the marshaling work forwards to our "fake remote" above.
     sp<MessageBase> msg = new MessageCaptureScreen(this,
             display, IGraphicBufferProducer::asInterface( wrapper ),
-            reqWidth, reqHeight, minLayerZ, maxLayerZ);
+            reqWidth, reqHeight, minLayerZ, maxLayerZ,
+            useReadPixels);
 
     status_t res = postMessageAsync(msg);
     if (res == NO_ERROR) {
@@ -2967,7 +2998,8 @@ status_t SurfaceFlinger::captureScreenImplLocked(
         const sp<const DisplayDevice>& hw,
         const sp<IGraphicBufferProducer>& producer,
         uint32_t reqWidth, uint32_t reqHeight,
-        uint32_t minLayerZ, uint32_t maxLayerZ)
+        uint32_t minLayerZ, uint32_t maxLayerZ,
+        bool useReadPixels)
 {
     ATRACE_CALL();
 
@@ -2991,8 +3023,10 @@ status_t SurfaceFlinger::captureScreenImplLocked(
 
     status_t result = NO_ERROR;
     if (native_window_api_connect(window, NATIVE_WINDOW_API_EGL) == NO_ERROR) {
-        uint32_t usage = GRALLOC_USAGE_SW_READ_OFTEN | GRALLOC_USAGE_SW_WRITE_OFTEN |
-                        GRALLOC_USAGE_HW_RENDER | GRALLOC_USAGE_HW_TEXTURE;
+        uint32_t usage = GRALLOC_USAGE_SW_READ_OFTEN | GRALLOC_USAGE_SW_WRITE_OFTEN;
+        if (!useReadPixels) {
+            usage |= GRALLOC_USAGE_HW_RENDER | GRALLOC_USAGE_HW_TEXTURE;
+        }
 
         int err = 0;
         err = native_window_set_buffers_dimensions(window, reqWidth, reqHeight);
@@ -3014,7 +3048,7 @@ status_t SurfaceFlinger::captureScreenImplLocked(
                 if (image != EGL_NO_IMAGE_KHR) {
                     // this binds the given EGLImage as a framebuffer for the
                     // duration of this scope.
-                    RenderEngine::BindImageAsFramebuffer imageBond(getRenderEngine(), image);
+                    RenderEngine::BindImageAsFramebuffer imageBond(getRenderEngine(), image, useReadPixels, reqWidth, reqHeight);
                     if (imageBond.getStatus() == NO_ERROR) {
                         // this will in fact render into our dequeued buffer
                         // via an FBO, which means we didn't have to create
@@ -3042,6 +3076,15 @@ status_t SurfaceFlinger::captureScreenImplLocked(
                         } else {
                             ALOGW("captureScreen: error creating EGL fence: %#x", eglGetError());
                             // not fatal
+                        }
+
+                        if (useReadPixels) {
+                            sp<GraphicBuffer> buf = static_cast<GraphicBuffer*>(buffer);
+                            void* vaddr;
+                            if (buf->lock(GRALLOC_USAGE_SW_WRITE_OFTEN, &vaddr) == NO_ERROR) {
+                                getRenderEngine().readPixels(0, 0, buffer->stride, reqHeight, (uint32_t *)vaddr);
+                                buf->unlock();
+                            }
                         }
 
                         if (DEBUG_SCREENSHOTS) {
