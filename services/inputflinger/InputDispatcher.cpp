@@ -1710,8 +1710,7 @@ bool InputDispatcher::isWindowObscuredAtPointLocked(
         }
         if (otherInfo->displayId == displayId
                 && otherInfo->visible && !otherInfo->isTrustedOverlay()
-                && (otherInfo->frameContainsPoint(x, y) || otherInfo->overlaps(windowInfo))) {
-
+                && otherInfo->frameContainsPoint(x, y)) {
             return true;
         }
     }
