@@ -90,21 +90,28 @@ Layer* DisplayUtils::getLayerInstance(SurfaceFlinger* flinger,
     return new Layer(flinger, client, name, w, h, flags);
 }
 
+#ifndef USE_HWC2
 HWComposer* DisplayUtils::getHWCInstance(
                         const sp<SurfaceFlinger>& flinger,
                         HWComposer::EventHandler& handler) {
-#if defined(QTI_BSP) && !defined(USE_HWC2)
+#ifdef QTI_BSP
     if(sUseExtendedImpls) {
         return new ExHWComposer(flinger, handler);
     }
 #endif
-#if defined(USE_HWC2)
-    (void)handler;
-    return new HWComposer(flinger);
-#else
-    return new HWComposer(flinger, handler);
-#endif
+    return new HWComposer(flinger,handler);
 }
+#else
+HWComposer* DisplayUtils::getHWCInstance(
+                        const sp<SurfaceFlinger>& flinger) {
+#ifdef QTI_BSP
+    if(sUseExtendedImpls) {
+        return new ExHWComposer(flinger);
+    }
+#endif
+    return new HWComposer(flinger);
+}
+#endif
 
 void DisplayUtils::initVDSInstance(HWComposer* hwc, int32_t hwcDisplayId,
         sp<IGraphicBufferProducer> currentStateSurface, sp<DisplaySurface> &dispSurface,
